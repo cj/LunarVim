@@ -70,7 +70,7 @@ local function jumpable(dir)
       local n_next = node.next
       local next_pos = n_next and n_next.mark:pos_begin()
       local candidate = n_next ~= snippet and next_pos and (pos[1] < next_pos[1])
-        or (pos[1] == next_pos[1] and pos[2] < next_pos[2])
+          or (pos[1] == next_pos[1] and pos[2] < next_pos[2])
 
       -- Past unmarked exit node, exit early
       if n_next == nil or n_next == snippet.next then
@@ -208,7 +208,7 @@ M.config = function()
         end
         vim_item.menu = lvim.builtin.cmp.formatting.source_names[entry.source.name]
         vim_item.dup = lvim.builtin.cmp.formatting.duplicates[entry.source.name]
-          or lvim.builtin.cmp.formatting.duplicates_default
+            or lvim.builtin.cmp.formatting.duplicates_default
         return vim_item
       end,
     },
@@ -278,8 +278,8 @@ M.config = function()
       { name = "tmux" },
     },
     mapping = cmp.mapping.preset.insert {
-      ["<C-k>"] = cmp.mapping(cmp.mapping.select_prev_item(), { "i", "c" }),
-      ["<C-j>"] = cmp.mapping(cmp.mapping.select_next_item(), { "i", "c" }),
+      ["<C-k>"] = cmp.mapping(cmp.mapping.select_prev_item { behavior = cmp.SelectBehavior.Select }, { "i" }),
+      ["<C-j>"] = cmp.mapping(cmp.mapping.select_next_item { behavior = cmp.SelectBehavior.Select }, { "i" }),
       ["<Down>"] = cmp.mapping(cmp.mapping.select_next_item { behavior = cmp.SelectBehavior.Select }, { "i" }),
       ["<Up>"] = cmp.mapping(cmp.mapping.select_prev_item { behavior = cmp.SelectBehavior.Select }, { "i" }),
       ["<C-d>"] = cmp.mapping.scroll_docs(-4),
@@ -296,7 +296,7 @@ M.config = function()
       },
       ["<Tab>"] = cmp.mapping(function(fallback)
         if cmp.visible() then
-          cmp.select_next_item()
+          cmp.select_next_item { behavior = cmp.SelectBehavior.Select }
         elseif luasnip.expand_or_locally_jumpable() then
           luasnip.expand_or_jump()
         elseif jumpable(1) then
@@ -310,7 +310,7 @@ M.config = function()
       end, { "i", "s" }),
       ["<S-Tab>"] = cmp.mapping(function(fallback)
         if cmp.visible() then
-          cmp.select_prev_item()
+          cmp.select_prev_item { behavior = cmp.SelectBehavior.Select }
         elseif luasnip.jumpable(-1) then
           luasnip.jump(-1)
         else
@@ -319,6 +319,21 @@ M.config = function()
       end, { "i", "s" }),
       ["<C-Space>"] = cmp.mapping.complete(),
       ["<C-e>"] = cmp.mapping.abort(),
+      ["<C-l>"] = cmp.mapping(function(fallback)
+        if cmp.visible() then
+          local confirm_opts = vim.deepcopy(lvim.builtin.cmp.confirm_opts) -- avoid mutating the original opts below
+          local is_insert_mode = function()
+            return vim.api.nvim_get_mode().mode:sub(1, 1) == "i"
+          end
+          if is_insert_mode() then -- prevent overwriting brackets
+            confirm_opts.behavior = cmp.ConfirmBehavior.Insert
+          end
+          if cmp.confirm(confirm_opts) then
+            return -- success, exit early
+          end
+        end
+        fallback() -- if not exited early, always fallback
+      end),
       ["<CR>"] = cmp.mapping(function(fallback)
         if cmp.visible() then
           local confirm_opts = vim.deepcopy(lvim.builtin.cmp.confirm_opts) -- avoid mutating the original opts below
