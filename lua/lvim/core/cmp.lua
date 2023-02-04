@@ -118,14 +118,17 @@ end
 M.methods.jumpable = jumpable
 
 M.config = function()
-  local status_cmp_ok, cmp = pcall(require, "cmp")
+  local status_cmp_ok, cmp_types = pcall(require, "cmp.types.cmp")
   if not status_cmp_ok then
     return
   end
-  local status_luasnip_ok, luasnip = pcall(require, "luasnip")
-  if not status_luasnip_ok then
-    return
-  end
+  local ConfirmBehavior = cmp_types.ConfirmBehavior
+  local SelectBehavior = cmp_types.SelectBehavior
+
+  local cmp = require("lvim.utils.modules").require_on_index "cmp"
+  local luasnip = require("lvim.utils.modules").require_on_index "luasnip"
+  local cmp_window = require "cmp.config.window"
+  local cmp_mapping = require "cmp.config.mapping"
 
   lvim.builtin.cmp = {
     active = true,
@@ -138,7 +141,7 @@ M.config = function()
       return lvim.builtin.cmp.active
     end,
     confirm_opts = {
-      behavior = cmp.ConfirmBehavior.Replace,
+      behavior = ConfirmBehavior.Replace,
       select = false,
     },
     completion = {
@@ -214,12 +217,12 @@ M.config = function()
     },
     snippet = {
       expand = function(args)
-        require("luasnip").lsp_expand(args.body)
+        luasnip.lsp_expand(args.body)
       end,
     },
     window = {
-      completion = cmp.config.window.bordered(),
-      documentation = cmp.config.window.bordered(),
+      completion = cmp_window.bordered(),
+      documentation = cmp_window.bordered(),
     },
     sources = {
       {
@@ -255,7 +258,7 @@ M.config = function()
       {
         name = "nvim_lsp",
         entry_filter = function(entry, ctx)
-          local kind = require("cmp.types").lsp.CompletionItemKind[entry:get_kind()]
+          local kind = require("cmp.types.lsp").CompletionItemKind[entry:get_kind()]
           if kind == "Snippet" and ctx.prev_context.filetype == "java" then
             return false
           end
@@ -288,13 +291,13 @@ M.config = function()
         i = cmp.mapping.confirm { behavior = cmp.ConfirmBehavior.Replace, select = false },
         c = function(fallback)
           if cmp.visible() then
-            cmp.confirm { behavior = cmp.ConfirmBehavior.Replace, select = false }
+            cmp.confirm { behavior = ConfirmBehavior.Replace, select = false }
           else
             fallback()
           end
         end,
       },
-      ["<Tab>"] = cmp.mapping(function(fallback)
+      ["<Tab>"] = cmp_mapping(function(fallback)
         if cmp.visible() then
           cmp.select_next_item { behavior = cmp.SelectBehavior.Select }
         elseif luasnip.expand_or_locally_jumpable() then
@@ -308,7 +311,7 @@ M.config = function()
           fallback()
         end
       end, { "i", "s" }),
-      ["<S-Tab>"] = cmp.mapping(function(fallback)
+      ["<S-Tab>"] = cmp_mapping(function(fallback)
         if cmp.visible() then
           cmp.select_prev_item { behavior = cmp.SelectBehavior.Select }
         elseif luasnip.jumpable(-1) then
@@ -341,7 +344,7 @@ M.config = function()
             return vim.api.nvim_get_mode().mode:sub(1, 1) == "i"
           end
           if is_insert_mode() then -- prevent overwriting brackets
-            confirm_opts.behavior = cmp.ConfirmBehavior.Insert
+            confirm_opts.behavior = ConfirmBehavior.Insert
           end
           if cmp.confirm(confirm_opts) then
             return -- success, exit early
